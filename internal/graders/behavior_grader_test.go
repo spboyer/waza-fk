@@ -91,7 +91,7 @@ func TestBehaviorGrader_MaxToolCalls(t *testing.T) {
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
 				ToolCallCount: 999,
-				TokensTotal:   500,
+				Usage:         &models.UsageStats{InputTokens: 500},
 			},
 		})
 		require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestBehaviorGrader_MaxTokens(t *testing.T) {
 
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
-				TokensTotal: 500,
+				Usage: &models.UsageStats{InputTokens: 500},
 			},
 		})
 		require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestBehaviorGrader_MaxTokens(t *testing.T) {
 
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
-				TokensTotal: 1000,
+				Usage: &models.UsageStats{InputTokens: 1000},
 			},
 		})
 		require.NoError(t, err)
@@ -141,12 +141,25 @@ func TestBehaviorGrader_MaxTokens(t *testing.T) {
 
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
-				TokensTotal: 1200,
+				Usage: &models.UsageStats{InputTokens: 1200},
 			},
 		})
 		require.NoError(t, err)
 		require.False(t, results.Passed)
 		require.Contains(t, results.Feedback, "Token")
+	})
+
+	t.Run("pass when usage is nil", func(t *testing.T) {
+		g, err := NewBehaviorGrader("test", BehaviorGraderParams{
+			MaxTokens: 500,
+		})
+		require.NoError(t, err)
+
+		results, err := g.Grade(context.Background(), &Context{
+			Session: &models.SessionDigest{},
+		})
+		require.NoError(t, err)
+		require.True(t, results.Passed)
 	})
 }
 
@@ -312,7 +325,7 @@ func TestBehaviorGrader_CombinedRules(t *testing.T) {
 			DurationMS: 5000,
 			Session: &models.SessionDigest{
 				ToolCallCount: 3,
-				TokensTotal:   800,
+				Usage:         &models.UsageStats{InputTokens: 800},
 				ToolsUsed:     []string{"read_file", "write_file"},
 			},
 		})
@@ -335,7 +348,7 @@ func TestBehaviorGrader_CombinedRules(t *testing.T) {
 			DurationMS: 5000,
 			Session: &models.SessionDigest{
 				ToolCallCount: 15, // over limit
-				TokensTotal:   800,
+				Usage:         &models.UsageStats{InputTokens: 800},
 				ToolsUsed:     []string{"read_file", "write_file"},
 			},
 		})
@@ -357,9 +370,9 @@ func TestBehaviorGrader_CombinedRules(t *testing.T) {
 
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
-				ToolCallCount: 20,               // over limit
-				TokensTotal:   5000,             // over limit
-				ToolsUsed:     []string{"exec"}, // forbidden used, required missing
+				ToolCallCount: 20,                                    // over limit
+				Usage:         &models.UsageStats{InputTokens: 5000}, // over limit
+				ToolsUsed:     []string{"exec"},                      // forbidden used, required missing
 			},
 		})
 		require.NoError(t, err)
@@ -378,7 +391,7 @@ func TestBehaviorGrader_CombinedRules(t *testing.T) {
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
 				ToolCallCount: 10,
-				TokensTotal:   500,
+				Usage:         &models.UsageStats{InputTokens: 500},
 			},
 		})
 		require.NoError(t, err)
@@ -430,7 +443,7 @@ func TestBehaviorGrader_EdgeCases(t *testing.T) {
 
 		results, err := g.Grade(context.Background(), &Context{
 			Session: &models.SessionDigest{
-				TokensTotal: 0,
+				Usage: &models.UsageStats{InputTokens: 0},
 			},
 		})
 		require.NoError(t, err)
