@@ -214,6 +214,8 @@ func TestCopilotExecute_StartRespectsTimeout(t *testing.T) {
 	// Regression test for: waza suggest deadlocks — goroutine panic on copilot SDK stdio transport.
 	// Verifies that Execute() bounds Start() with the request Timeout so that an unresponsive
 	// copilot CLI does not deadlock indefinitely.
+	t.Attr("Issue", "https://github.com/github/copilot-sdk/issues/668")
+	t.Skip("Skipping - passing a context to copilot.Start causes copilot CLI to exit")
 	ctrl := gomock.NewController(t)
 	clientMock := NewMockcopilotClient(ctrl)
 
