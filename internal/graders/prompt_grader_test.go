@@ -168,6 +168,8 @@ func TestUsingPreviousSessionID(t *testing.T) {
 		// Note: we intentionally do not call Shutdown here so the session is not deleted and
 		// can be resumed by the prompt grader below.
 
+		require.NoError(t, engine.Initialize(context.Background()))
+
 		numBytes := [8]byte{}
 		n, err := rand.Read(numBytes[:])
 		require.NoError(t, err)

@@ -83,6 +83,10 @@ func (p *promptGrader) gradeIndependent(ctx context.Context, gradingContext *Con
 			}
 		}()
 
+		if err := engine.Initialize(ctx); err != nil {
+			return nil, fmt.Errorf("failed to initialize engine for prompt grader: %w", err)
+		}
+
 		req := &execution.ExecutionRequest{
 			ModelID: p.args.Model,
 			Message: p.args.Prompt,
@@ -350,6 +354,10 @@ func (p *promptGrader) runPairwiseOnce(
 			slog.ErrorContext(ctx, "error shutting down engine for pairwise grader", "error", err)
 		}
 	}()
+
+	if err := engine.Initialize(ctx); err != nil {
+		return nil, fmt.Errorf("failed to initialize engine for pairwise grading: %w", err)
+	}
 
 	prompt := buildPairwisePrompt(p.args.Prompt, outputA, outputB, labelA, labelB)
 
