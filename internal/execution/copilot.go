@@ -151,6 +151,7 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 			SkillDirectories: skillDirs,
 			WorkingDirectory: workspaceDir,
 			SystemMessage:    systemMessage,
+			Tools:            req.Tools,
 		})
 
 		if err != nil {
@@ -166,6 +167,7 @@ func (e *CopilotEngine) Execute(ctx context.Context, req *ExecutionRequest) (*Ex
 			SkillDirectories: skillDirs,
 			WorkingDirectory: workspaceDir,
 			SystemMessage:    systemMessage,
+			Tools:            req.Tools,
 		})
 
 		if err != nil {
