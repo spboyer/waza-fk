@@ -184,6 +184,15 @@ type ProgramGraderParameters struct {
 
 func (ProgramGraderParameters) isGraderParameters() {}
 
+// TriggerHeuristicGraderParameters holds the arguments for creating a trigger heuristic grader.
+type TriggerHeuristicGraderParameters struct {
+	SkillPath string   `yaml:"skill_path" json:"skill_path"`
+	Mode      string   `yaml:"mode" json:"mode"`
+	Threshold *float64 `yaml:"threshold,omitempty" json:"threshold,omitempty"`
+}
+
+func (TriggerHeuristicGraderParameters) isGraderParameters() {}
+
 func decodeGraderParameters(kind GraderKind, configNode *yaml.Node) (GraderParameters, error) {
 	switch kind {
 	case GraderKindInlineScript:
@@ -208,6 +217,8 @@ func decodeGraderParameters(kind GraderKind, configNode *yaml.Node) (GraderParam
 		return decodeYAMLNode[JSONSchemaGraderParameters](configNode)
 	case GraderKindProgram:
 		return decodeYAMLNode[ProgramGraderParameters](configNode)
+	case GraderKindTrigger:
+		return decodeYAMLNode[TriggerHeuristicGraderParameters](configNode)
 	default:
 		return decodeYAMLNode[GenericGraderParameters](configNode)
 	}
