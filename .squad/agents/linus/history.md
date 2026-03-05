@@ -92,3 +92,7 @@ All code roles now use `claude-opus-4.6`. Docs/Scribe/diversity use `gemini-3-pr
 - **Files changed:** `cmd/waza/cmd_suggest.go` (new), `cmd/waza/cmd_suggest_test.go` (new), `internal/suggest/prompt.go` (new), `internal/suggest/suggest.go` (new), `internal/suggest/suggest_test.go` (new), `cmd/waza/root.go`, `README.md`, `site/src/content/docs/reference/cli.mdx`
 - **What:** Added `waza suggest <skill-path>` for LLM-driven eval generation. Command supports `--model`, `--dry-run` (default), `--apply`, `--output-dir`, and `--format yaml|json`. New `internal/suggest` package builds prompt context from SKILL.md + grader types + eval schema summary + example eval, parses structured YAML responses, validates generated `eval_yaml`, and writes `eval.yaml`/task/fixture files when applying.
 - **Key learning:** A robust parser needs to handle both structured wrapper YAML (`eval_yaml` + files) and fenced YAML blocks from models. Validating generated `eval_yaml` against `models.BenchmarkSpec.Validate()` catches malformed model output early before writing files.
+
+## Learnings
+- Windows local test runs can fail in `cmd/waza/tokens/internal/git` when temporary repos inherit strict CRLF behavior; setting `core.autocrlf=false` and `core.safecrlf=false` inside test repo setup makes these tests cross-platform stable.
+- PR conflict resolution for `copilot/migrate-copilot-client-usage` in `internal/execution/copilot_test.go` should keep the `TestCopilotExecute_InitializePropagatesStartError` variant from main to preserve startup error propagation coverage.
