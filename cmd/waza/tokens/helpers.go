@@ -110,25 +110,40 @@ func ConfigDetectOptions() []workspace.DetectOption {
 }
 
 // resolveLimitsConfig returns a TokenLimitsConfig using .waza.yaml as the
-// primary source. Falls back to .token-limits.json (handled by Check()),
-// then built-in defaults when neither provides limits.
-func resolveLimitsConfig(skillDir string) checks.TokenLimitsConfig {
-	// Skill-level .token-limits.json takes precedence — let Check() load it.
-	if _, err := os.Stat(filepath.Join(skillDir, ".token-limits.json")); err == nil {
-		return checks.TokenLimitsConfig{}
-	}
+// primary source and a flag indicating whether the legacy .token-limits.json
+// was used as fallback. When usedLegacy is true the caller should emit a
+// deprecation warning. Falls back to built-in defaults (via Check()) when
+// neither source provides limits.
+//
+// Priority:
+//  1. .waza.yaml tokens.limits (primary)
+//  2. .token-limits.json (legacy fallback — caller emits deprecation warning)
+//  3. Built-in defaults
+func resolveLimitsConfig(skillDir string) (cfg checks.TokenLimitsConfig, usedLegacy bool) {
+	// Primary: .waza.yaml tokens.limits
 	pcfg, err := projectconfig.Load(skillDir)
-	if err != nil || pcfg.Tokens.Limits == nil || pcfg.Tokens.Limits.Defaults == nil {
-		return checks.TokenLimitsConfig{}
+	if err == nil && pcfg.Tokens.Limits != nil && (pcfg.Tokens.Limits.Defaults != nil || pcfg.Tokens.Limits.Overrides != nil) {
+		defaults := pcfg.Tokens.Limits.Defaults
+		if defaults == nil {
+			defaults = make(map[string]int)
+		}
+		overrides := pcfg.Tokens.Limits.Overrides
+		if overrides == nil {
+			overrides = make(map[string]int)
+		}
+		return checks.TokenLimitsConfig{
+			Defaults:  defaults,
+			Overrides: overrides,
+		}, false
 	}
-	overrides := pcfg.Tokens.Limits.Overrides
-	if overrides == nil {
-		overrides = make(map[string]int)
+
+	// Legacy fallback: .token-limits.json — let Check() load it.
+	if _, statErr := os.Stat(filepath.Join(skillDir, ".token-limits.json")); statErr == nil {
+		return checks.TokenLimitsConfig{}, true
 	}
-	return checks.TokenLimitsConfig{
-		Defaults:  pcfg.Tokens.Limits.Defaults,
-		Overrides: overrides,
-	}
+
+	// Neither source has limits — Check() will apply built-in defaults.
+	return checks.TokenLimitsConfig{}, false
 }
 
 // computeWorkspaceRelPrefix returns the forward-slash-separated path from
