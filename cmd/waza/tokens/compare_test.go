@@ -699,4 +699,54 @@ func TestCompare_Threshold(t *testing.T) {
 		require.True(t, report.Passed)
 		require.Equal(t, 500.0, report.Threshold)
 	})
+
+	t.Run("over-limit with threshold only does not fail", func(t *testing.T) {
+		dir := initRepo(t)
+
+		// Low absolute limit so the file exceeds it
+		cfg := "paths:\n  skills: skills\ntokens:\n  limits:\n    defaults:\n      \"skills/**/SKILL.md\": 5\n"
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(cfg), 0o644))
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "skills", "big"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "skills", "big", "SKILL.md"), []byte("# Big\none two three four"), 0o644))
+		commit(t, dir, "initial")
+
+		// Small change (under threshold) but still over absolute limit
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "skills", "big", "SKILL.md"), []byte("# Big\none two three four five"), 0o644))
+
+		out := new(bytes.Buffer)
+		cmd := newCompareCmd()
+		cmd.SetOut(out)
+		cmd.SetErr(new(bytes.Buffer))
+		// threshold is set, but --strict is intentionally omitted
+		cmd.SetArgs([]string{"main", "--skills", "--threshold", "500"})
+
+		// With threshold only, absolute-limit breaches should not cause failure
+		require.NoError(t, cmd.Execute())
+	})
+
+	t.Run("both threshold and strict report independently", func(t *testing.T) {
+		dir := initRepo(t)
+
+		// Low absolute limit
+		cfg := "paths:\n  skills: skills\ntokens:\n  limits:\n    defaults:\n      \"skills/**/SKILL.md\": 5\n"
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(cfg), 0o644))
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "skills", "big"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "skills", "big", "SKILL.md"), []byte("# Big\none two"), 0o644))
+		commit(t, dir, "initial")
+
+		// Large change: over threshold AND over absolute limit
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "skills", "big", "SKILL.md"), []byte("# Big\none two three four five six seven eight nine ten"), 0o644))
+
+		out := new(bytes.Buffer)
+		cmd := newCompareCmd()
+		cmd.SetOut(out)
+		cmd.SetErr(new(bytes.Buffer))
+		cmd.SetArgs([]string{"main", "--skills", "--threshold", "5", "--strict"})
+
+		err := cmd.Execute()
+		require.Error(t, err)
+		// Both categories should appear in the error
+		require.Contains(t, err.Error(), "exceeded")
+		require.Contains(t, err.Error(), "over absolute token limit")
+	})
 }

@@ -65,6 +65,7 @@ type fileComparison struct {
 	PercentChange float64     `json:"percentChange"`
 	Status        string      `json:"status"`
 	Limit         int         `json:"limit,omitempty"`
+	OverLimit     bool        `json:"overLimit,omitempty"`
 	Exceeded      bool        `json:"exceeded,omitempty"`
 }
 
@@ -79,6 +80,7 @@ type comparisonSummary struct {
 	FilesIncreased    int     `json:"filesIncreased"`
 	FilesDecreased    int     `json:"filesDecreased"`
 	ExceededCount     int     `json:"exceededCount,omitempty"`
+	LimitExceeded     int     `json:"limitExceeded,omitempty"`
 	ThresholdBreached int     `json:"thresholdBreached,omitempty"`
 }
 
@@ -163,7 +165,11 @@ func runCompare(cmd *cobra.Command, args []string) error {
 			if comparisons[i].After != nil {
 				lr := checks.GetLimitForFile(comparisons[i].File, cfg)
 				comparisons[i].Limit = lr.Limit
-				comparisons[i].Exceeded = comparisons[i].After.Tokens > lr.Limit
+				comparisons[i].OverLimit = comparisons[i].After.Tokens > lr.Limit
+				// Absolute limit breaches only cause failure when --strict is set
+				if strict && comparisons[i].OverLimit {
+					comparisons[i].Exceeded = true
+				}
 			}
 		}
 	}
@@ -178,7 +184,7 @@ func runCompare(cmd *cobra.Command, args []string) error {
 	}
 
 	// summarize before filtering out unchanged files so totals reflect all files
-	summary := calculateSummary(comparisons, threshold)
+	summary := calculateSummary(comparisons, threshold, strict)
 	if !showUnchanged {
 		comparisons = slices.DeleteFunc(comparisons, func(c fileComparison) bool {
 			return c.Status == "unchanged"
@@ -233,14 +239,15 @@ func resolveSkillsBaseRef(rootDir string) string {
 }
 
 // buildFailureError produces a descriptive error message.
+// LimitExceeded and ThresholdBreached are tracked independently so a file
+// that triggers both is correctly reported in both categories.
 func buildFailureError(summary comparisonSummary, threshold float64) error {
 	var parts []string
 	if summary.ThresholdBreached > 0 {
 		parts = append(parts, fmt.Sprintf("%d file(s) exceeded %.1f%% threshold", summary.ThresholdBreached, threshold))
 	}
-	limitsOnly := summary.ExceededCount - summary.ThresholdBreached
-	if limitsOnly > 0 {
-		parts = append(parts, fmt.Sprintf("%d file(s) over absolute token limit", limitsOnly))
+	if summary.LimitExceeded > 0 {
+		parts = append(parts, fmt.Sprintf("%d file(s) over absolute token limit", summary.LimitExceeded))
 	}
 	if len(parts) == 0 {
 		return fmt.Errorf("%d file(s) exceed token limits after changes", summary.ExceededCount)
@@ -451,7 +458,7 @@ func compareFilesets(baseRef, headRef, rootDir string, baseFiles, headFiles map[
 	return comparisons, nil
 }
 
-func calculateSummary(comparisons []fileComparison, threshold float64) comparisonSummary {
+func calculateSummary(comparisons []fileComparison, threshold float64, strict bool) comparisonSummary {
 	var s comparisonSummary
 	for _, c := range comparisons {
 		if c.Before != nil {
@@ -475,10 +482,13 @@ func calculateSummary(comparisons []fileComparison, threshold float64) compariso
 		}
 		if c.Exceeded {
 			s.ExceededCount++
-			// Count threshold breaches separately from absolute limit violations
-			if threshold > 0 && c.Status != "added" && c.PercentChange > threshold {
-				s.ThresholdBreached++
-			}
+		}
+		// Track limit and threshold breaches independently
+		if strict && c.OverLimit {
+			s.LimitExceeded++
+		}
+		if threshold > 0 && c.Status != "added" && c.PercentChange > threshold {
+			s.ThresholdBreached++
 		}
 	}
 	s.TotalDiff = s.TotalAfter - s.TotalBefore
@@ -527,10 +537,12 @@ func compareTable(comparisons []fileComparison, summary comparisonSummary, baseR
 
 		var statusIcon string
 		switch {
-		case c.Exceeded && c.Limit > 0 && c.After != nil && c.After.Tokens > c.Limit:
+		case c.OverLimit && c.Exceeded:
 			statusIcon = fmt.Sprintf("⚠️ Over limit (%d)", c.Limit)
 		case c.Exceeded:
 			statusIcon = fmt.Sprintf("⚠️ +%.1f%%", c.PercentChange)
+		case c.OverLimit:
+			statusIcon = fmt.Sprintf("ℹ️ Over limit (%d)", c.Limit)
 		case c.Status == "added":
 			statusIcon = "🆕"
 		case c.Status == "removed":
@@ -569,7 +581,7 @@ func compareTable(comparisons []fileComparison, summary comparisonSummary, baseR
 		fmt.Fprintf(&sb, "\n⚠️  %d file(s) exceed limits:\n", summary.ExceededCount)
 		for _, c := range comparisons {
 			if c.Exceeded && c.After != nil {
-				if c.Limit > 0 && c.After.Tokens > c.Limit {
+				if c.OverLimit {
 					over := c.After.Tokens - c.Limit
 					fmt.Fprintf(&sb, "   %s: %d tokens (%d over limit of %d)\n", c.File, c.After.Tokens, over, c.Limit)
 				} else {
