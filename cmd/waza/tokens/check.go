@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -117,12 +118,9 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		// ContextNone or error: fall through to CWD scan
 	}
 
-	results, usedLegacyLimits, err := computeCheckResults(rootDir, paths, computeWorkspaceRelPrefix(workspaceRoot, rootDir))
+	results, err := computeCheckResults(rootDir, paths, computeWorkspaceRelPrefix(workspaceRoot, rootDir), cmd.ErrOrStderr())
 	if err != nil {
 		return err
-	}
-	if usedLegacyLimits {
-		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "⚠️  .token-limits.json is deprecated; migrate limits to .waza.yaml tokens.limits")
 	}
 
 	output := ""
@@ -239,16 +237,19 @@ func checkJSON(results []checkResult) (string, error) {
 }
 
 // computeCheckResults runs the token limits checker and returns sorted results.
-func computeCheckResults(rootDir string, paths []string, workspaceRelPrefix string) ([]checkResult, bool, error) {
-	limitsConfig, usedLegacyLimits := resolveLimitsConfig(rootDir)
+func computeCheckResults(rootDir string, paths []string, workspaceRelPrefix string, errW io.Writer) ([]checkResult, error) {
+	cfg, usedLegacy := resolveLimitsConfig(rootDir)
+	if usedLegacy {
+		_, _ = fmt.Fprintf(errW, "⚠️  Using legacy .token-limits.json — consider moving limits to .waza.yaml\n")
+	}
 	checker := &checks.TokenLimitsChecker{
-		Config:             limitsConfig,
+		Config:             cfg,
 		Paths:              paths,
 		WorkspaceRelPrefix: workspaceRelPrefix,
 	}
 	limitsData, err := checker.Limits(skill.Skill{Path: filepath.Join(rootDir, "SKILL.md")})
 	if err != nil {
-		return nil, usedLegacyLimits, err
+		return nil, err
 	}
 
 	var results []checkResult
@@ -269,7 +270,7 @@ func computeCheckResults(rootDir string, paths []string, workspaceRelPrefix stri
 		return results[i].File < results[j].File
 	})
 
-	return results, usedLegacyLimits, nil
+	return results, nil
 }
 
 // batchCheckReport wraps per-skill check results for JSON output.
@@ -304,7 +305,7 @@ func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format stri
 			}
 		}
 
-		results, usedLegacyLimits, err := computeCheckResults(si.Dir, nil, computeWorkspaceRelPrefix(workspaceRoot, si.Dir))
+		results, err := computeCheckResults(si.Dir, nil, computeWorkspaceRelPrefix(workspaceRoot, si.Dir), cmd.ErrOrStderr())
 		if err != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "  ⚠️  %s: %s\n", si.Name, err) //nolint:errcheck
 			if format == "json" {
@@ -314,9 +315,6 @@ func runCheckBatch(cmd *cobra.Command, skills []workspace.SkillInfo, format stri
 				})
 			}
 			continue
-		}
-		if usedLegacyLimits {
-			fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  %s: .token-limits.json is deprecated; migrate limits to .waza.yaml tokens.limits\n", si.Name) //nolint:errcheck
 		}
 
 		exceeded := countExceeded(results)

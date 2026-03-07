@@ -331,7 +331,8 @@ tokens:
       "skills/complex-skill/SKILL.md": 7500
 ```
 
-`waza tokens check` falls back to `.token-limits.json` when `.waza.yaml` limits are missing and prints a deprecation warning.
+Token limits are resolved in priority order: `.waza.yaml tokens.limits` → `.token-limits.json` (legacy, emits a deprecation warning) → built-in defaults.
+See the **[Token Limits guide](../../guides/token-limits/)** for configuration details, pattern syntax, and migration instructions.
 
 ### waza tokens profile
 

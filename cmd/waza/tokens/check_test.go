@@ -3,7 +3,6 @@ package tokens
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -320,59 +319,82 @@ func TestCheck_ConfigPatternInJSON(t *testing.T) {
 	require.Equal(t, "*.md", result.Results[0].Pattern)
 }
 
-func TestCheck_WazaLimitsOverrideLegacyTokenLimits(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# Skill\n"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".waza.yaml"), []byte(`tokens:
-  limits:
-    defaults:
-      "*.md": 10000
-    overrides:
-      "SKILL.md": 777
-`), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".token-limits.json"), []byte(`{
-  "defaults": {"*.md": 123},
-  "overrides": {"SKILL.md": 321}
-}`), 0o644))
-
-	t.Chdir(dir)
+func TestCheck_WazaYamlLimits(t *testing.T) {
+	td := checkFixture(t, "waza-yaml-limits")
+	t.Chdir(td)
 
 	out := new(bytes.Buffer)
-	errOut := new(bytes.Buffer)
 	cmd := newCheckCmd()
 	cmd.SetOut(out)
-	cmd.SetErr(errOut)
 	cmd.SetArgs([]string{"--format", "json"})
 	require.NoError(t, cmd.Execute())
 
 	var report checkReport
 	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
-	require.Len(t, report.Results, 1)
-	require.Equal(t, 777, report.Results[0].Limit)
-	require.NotContains(t, errOut.String(), ".token-limits.json is deprecated")
+
+	require.Equal(t, 2, report.TotalFiles)
+
+	limitsByFile := make(map[string]int)
+	for _, r := range report.Results {
+		limitsByFile[r.File] = r.Limit
+	}
+	require.Equal(t, 800, limitsByFile["normal.md"], "should use .waza.yaml default limit")
+	require.Equal(t, 5000, limitsByFile["special.md"], "should use .waza.yaml override")
 }
 
-func TestCheck_LegacyTokenLimitsFallbackWarning(t *testing.T) {
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# Skill\n"), 0o644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".token-limits.json"), []byte(`{
-  "defaults": {"*.md": 123},
-  "overrides": {"SKILL.md": 321}
-}`), 0o644))
-
-	t.Chdir(dir)
+func TestCheck_BothConfigs_WazaYamlWins(t *testing.T) {
+	td := checkFixture(t, "both-configs")
+	t.Chdir(td)
 
 	out := new(bytes.Buffer)
-	errOut := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
 	cmd := newCheckCmd()
 	cmd.SetOut(out)
-	cmd.SetErr(errOut)
+	cmd.SetErr(errBuf)
 	cmd.SetArgs([]string{"--format", "json"})
 	require.NoError(t, cmd.Execute())
 
 	var report checkReport
 	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
-	require.Len(t, report.Results, 1)
-	require.Equal(t, 321, report.Results[0].Limit)
-	require.Contains(t, errOut.String(), ".token-limits.json is deprecated")
+
+	require.Equal(t, 2, report.TotalFiles)
+
+	limitsByFile := make(map[string]int)
+	for _, r := range report.Results {
+		limitsByFile[r.File] = r.Limit
+	}
+	// .waza.yaml has 900 for *.md; .token-limits.json has 10 — .waza.yaml must win
+	require.Equal(t, 900, limitsByFile["normal.md"], ".waza.yaml limits should take priority over .token-limits.json")
+	require.Equal(t, 6000, limitsByFile["special.md"], ".waza.yaml overrides should take priority over .token-limits.json")
+	require.NotContains(t, errBuf.String(), "legacy", "should not emit deprecation warning when .waza.yaml is present")
+}
+
+func TestCheck_LegacyWarningEmitted(t *testing.T) {
+	td := checkFixture(t, "legacy-json-only")
+	t.Chdir(td)
+
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+	cmd := newCheckCmd()
+	cmd.SetOut(outBuf)
+	cmd.SetErr(errBuf)
+	cmd.SetArgs([]string{"--format", "json"})
+	require.NoError(t, cmd.Execute())
+
+	require.Contains(t, errBuf.String(), "legacy .token-limits.json", "should emit deprecation warning on stderr")
+}
+
+func TestCheck_NoWarningWithWazaYaml(t *testing.T) {
+	td := checkFixture(t, "waza-yaml-limits")
+	t.Chdir(td)
+
+	outBuf := new(bytes.Buffer)
+	errBuf := new(bytes.Buffer)
+	cmd := newCheckCmd()
+	cmd.SetOut(outBuf)
+	cmd.SetErr(errBuf)
+	cmd.SetArgs([]string{"--format", "json"})
+	require.NoError(t, cmd.Execute())
+
+	require.NotContains(t, errBuf.String(), "legacy", "should not emit deprecation warning when .waza.yaml is used")
 }
