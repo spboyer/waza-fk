@@ -137,6 +137,7 @@ func TestResolveLimitsConfig_OverridesOnly_WazaYamlWinsOverLegacyJSON(t *testing
 	require.NotNil(t, cfg.Defaults, "defaults map should be initialized even when only overrides are configured")
 	require.Equal(t, 4000, cfg.Overrides["special.md"], ".waza.yaml overrides should win over legacy limits")
 }
+
 // --- hasConfiguredTokenLimits tests ---
 
 func TestHasConfiguredTokenLimits(t *testing.T) {
