@@ -110,14 +110,14 @@ func ConfigDetectOptions() []workspace.DetectOption {
 }
 
 // resolveLimitsConfig returns a TokenLimitsConfig using .waza.yaml as the
-// primary source and a flag indicating whether the legacy .token-limits.json
+// primary source and a flag indicating whether the deprecated .token-limits.json
 // was used as fallback. When usedLegacy is true the caller should emit a
 // deprecation warning. Falls back to built-in defaults (via Check()) when
 // neither source provides limits.
 //
 // Priority:
 //  1. .waza.yaml tokens.limits (primary)
-//  2. .token-limits.json (legacy fallback — caller emits deprecation warning)
+//  2. .token-limits.json (deprecated; migrate to .waza.yaml)
 //  3. Built-in defaults
 func resolveLimitsConfig(skillDir string) (cfg checks.TokenLimitsConfig, usedLegacy bool) {
 	// Primary: .waza.yaml tokens.limits
@@ -146,6 +146,8 @@ func resolveLimitsConfig(skillDir string) (cfg checks.TokenLimitsConfig, usedLeg
 	return checks.TokenLimitsConfig{}, false
 }
 
+// hasConfiguredTokenLimits reports whether a TokenLimitsConfig contains any
+// non-nil limit maps (defaults or overrides).
 func hasConfiguredTokenLimits(limits *projectconfig.TokenLimitsConfig) bool {
 	if limits == nil {
 		return false
