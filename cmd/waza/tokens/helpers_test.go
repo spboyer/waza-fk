@@ -147,7 +147,7 @@ func TestHasConfiguredTokenLimits(t *testing.T) {
 		want   bool
 	}{
 		{"nil", nil, false},
-		{"empty struct", &projectconfig.TokenLimitsConfig{}, false},
+		{"empty struct", &projectconfig.TokenLimitsConfig{}, true},
 		{"defaults only", &projectconfig.TokenLimitsConfig{Defaults: map[string]int{"*.md": 100}}, true},
 		{"overrides only", &projectconfig.TokenLimitsConfig{Overrides: map[string]int{"x.md": 50}}, true},
 		{"both", &projectconfig.TokenLimitsConfig{

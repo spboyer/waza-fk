@@ -146,14 +146,12 @@ func resolveLimitsConfig(skillDir string) (cfg checks.TokenLimitsConfig, usedLeg
 	return checks.TokenLimitsConfig{}, false
 }
 
-// hasConfiguredTokenLimits reports whether a TokenLimitsConfig contains any
-// non-nil limit maps (defaults or overrides). Empty but non-nil maps are
-// treated as configured.
+// hasConfiguredTokenLimits reports whether the user declared a token limits
+// section in .waza.yaml. A non-nil pointer means the section is present and
+// authoritative — even if both maps are empty (e.g. `tokens.limits: {}`).
+// This prevents fallback to the deprecated .token-limits.json.
 func hasConfiguredTokenLimits(limits *projectconfig.TokenLimitsConfig) bool {
-	if limits == nil {
-		return false
-	}
-	return limits.Defaults != nil || limits.Overrides != nil
+	return limits != nil
 }
 
 // computeWorkspaceRelPrefix returns the forward-slash-separated path from
