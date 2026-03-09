@@ -366,7 +366,7 @@ func TestCheck_BothConfigs_WazaYamlWins(t *testing.T) {
 	// .waza.yaml has 900 for *.md; .token-limits.json has 10 — .waza.yaml must win
 	require.Equal(t, 900, limitsByFile["normal.md"], ".waza.yaml limits should take priority over .token-limits.json")
 	require.Equal(t, 6000, limitsByFile["special.md"], ".waza.yaml overrides should take priority over .token-limits.json")
-	require.NotContains(t, errBuf.String(), "legacy", "should not emit deprecation warning when .waza.yaml is present")
+	require.Empty(t, errBuf.String(), "should not emit warnings when .waza.yaml is present")
 }
 
 func TestCheck_LegacyWarningEmitted(t *testing.T) {
@@ -396,5 +396,5 @@ func TestCheck_NoWarningWithWazaYaml(t *testing.T) {
 	cmd.SetArgs([]string{"--format", "json"})
 	require.NoError(t, cmd.Execute())
 
-	require.NotContains(t, errBuf.String(), "legacy", "should not emit deprecation warning when .waza.yaml is used")
+	require.Empty(t, errBuf.String(), "should not emit warnings when .waza.yaml is used")
 }
