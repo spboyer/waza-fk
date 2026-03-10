@@ -136,14 +136,17 @@ func (g *triggerHeuristicGrader) scorePrompt(prompt string) (score float64, phra
 	}
 
 	seen := make(map[string]bool)
+	uniqueTokens := make(map[string]struct{})
 	for _, token := range promptTokens {
+		uniqueTokens[token] = struct{}{}
 		if _, ok := g.keywords[token]; ok && !seen[token] {
 			seen[token] = true
 			matched = append(matched, token)
 		}
 	}
 
-	tokenScore := float64(len(matched)) / float64(len(promptTokens))
+	// Normalize by unique token count so repeated words don't dilute the score.
+	tokenScore := float64(len(matched)) / float64(len(uniqueTokens))
 	phraseScore = g.bestPhraseScore(prompt, promptTokens)
 	if phraseScore > tokenScore {
 		return phraseScore, phraseScore, matched
@@ -192,6 +195,15 @@ func (g *triggerHeuristicGrader) bestPhraseScore(prompt string, promptTokens []s
 }
 
 func loadTriggerHeuristicData(skillPath string) (map[string]struct{}, []string, error) {
+	// Accept both file and directory paths. If a directory is given, look for SKILL.md inside it.
+	info, err := os.Stat(skillPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading SKILL.md %s: %w", skillPath, err)
+	}
+	if info.IsDir() {
+		skillPath = filepath.Join(skillPath, "SKILL.md")
+	}
+
 	data, err := os.ReadFile(skillPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading SKILL.md %s: %w", skillPath, err)

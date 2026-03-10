@@ -144,11 +144,12 @@ func TestTriggerHeuristicGrader_ThresholdBoundary(t *testing.T) {
 
 func TestTriggerHeuristicGrader_ViaCreate(t *testing.T) {
 	skillPath := writeTestSkillFile(t)
+	threshold := 0.6
 
-	g, err := Create(models.GraderKindTrigger, "from-create", map[string]any{
-		"skill_path": skillPath,
-		"mode":       "positive",
-		"threshold":  0.6,
+	g, err := Create("from-create", models.TriggerHeuristicGraderParameters{
+		SkillPath: skillPath,
+		Mode:      "positive",
+		Threshold: &threshold,
 	})
 	require.NoError(t, err)
 	require.Equal(t, models.GraderKindTrigger, g.Kind())
@@ -190,4 +191,41 @@ func TestTriggerHeuristicGrader_NilGradingContext(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, float64(0), result.Score)
 	assert.False(t, result.Passed)
+}
+
+func TestTriggerHeuristicGrader_DuplicateTokensDoNotDiluteScore(t *testing.T) {
+	skillPath := writeTestSkillFile(t)
+	g, err := NewTriggerHeuristicGrader("dup-test", TriggerHeuristicGraderParams{
+		SkillPath: skillPath,
+		Mode:      "positive",
+	})
+	require.NoError(t, err)
+
+	// "deploy deploy deploy" has 1 unique token matching keyword "deploy".
+	// With unique-token normalization: 1 match / 1 unique token = 1.0
+	// Without normalization: 1 match / 3 tokens = 0.33 (artificially low)
+	result, err := g.Grade(context.Background(), &Context{
+		TestCase: &models.TestCase{Stimulus: models.TestStimulus{Message: "deploy deploy deploy"}},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.Passed, "repeated keyword prompt should pass")
+	assert.Greater(t, result.Score, 0.5, "score should not be diluted by duplicate tokens")
+}
+
+func TestTriggerHeuristicGrader_SkillPathDirectory(t *testing.T) {
+	// writeTestSkillFile returns the file path; extract the directory
+	filePath := writeTestSkillFile(t)
+	dirPath := filepath.Dir(filePath)
+
+	g, err := NewTriggerHeuristicGrader("dir-test", TriggerHeuristicGraderParams{
+		SkillPath: dirPath,
+		Mode:      "positive",
+	})
+	require.NoError(t, err)
+
+	result, err := g.Grade(context.Background(), &Context{
+		TestCase: &models.TestCase{Stimulus: models.TestStimulus{Message: "deploy to azure"}},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.Passed)
 }
