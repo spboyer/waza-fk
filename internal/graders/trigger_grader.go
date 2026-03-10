@@ -15,13 +15,6 @@ import (
 
 const defaultTriggerThreshold = 0.6
 
-// TriggerHeuristicGraderParams configures the trigger heuristic grader.
-type TriggerHeuristicGraderParams struct {
-	SkillPath string   `mapstructure:"skill_path"`
-	Mode      string   `mapstructure:"mode"`
-	Threshold *float64 `mapstructure:"threshold"`
-}
-
 type triggerHeuristicMode string
 
 const (
@@ -38,7 +31,7 @@ type triggerHeuristicGrader struct {
 	triggerPhrases []string
 }
 
-func NewTriggerHeuristicGrader(name string, params TriggerHeuristicGraderParams) (*triggerHeuristicGrader, error) {
+func NewTriggerHeuristicGrader(name string, params models.TriggerHeuristicGraderParameters) (*triggerHeuristicGrader, error) {
 	if strings.TrimSpace(params.SkillPath) == "" {
 		return nil, fmt.Errorf("trigger grader '%s' requires skill_path", name)
 	}

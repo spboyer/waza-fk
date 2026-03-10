@@ -15,14 +15,14 @@ func TestTriggerHeuristicGrader_ConstructorValidation(t *testing.T) {
 	skillPath := writeTestSkillFile(t)
 
 	t.Run("missing skill_path returns error", func(t *testing.T) {
-		_, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		_, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			Mode: "positive",
 		})
 		require.Error(t, err)
 	})
 
 	t.Run("invalid mode returns error", func(t *testing.T) {
-		_, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		_, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			SkillPath: skillPath,
 			Mode:      "maybe",
 		})
@@ -31,7 +31,7 @@ func TestTriggerHeuristicGrader_ConstructorValidation(t *testing.T) {
 
 	t.Run("invalid threshold returns error", func(t *testing.T) {
 		threshold := 1.2
-		_, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		_, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			SkillPath: skillPath,
 			Mode:      "positive",
 			Threshold: &threshold,
@@ -44,7 +44,7 @@ func TestTriggerHeuristicGrader_PositiveAndNegativeModes(t *testing.T) {
 	skillPath := writeTestSkillFile(t)
 
 	t.Run("positive mode passes for matching prompt", func(t *testing.T) {
-		g, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		g, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			SkillPath: skillPath,
 			Mode:      "positive",
 		})
@@ -64,7 +64,7 @@ func TestTriggerHeuristicGrader_PositiveAndNegativeModes(t *testing.T) {
 	})
 
 	t.Run("positive mode fails for unrelated prompt", func(t *testing.T) {
-		g, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		g, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			SkillPath: skillPath,
 			Mode:      "positive",
 		})
@@ -83,7 +83,7 @@ func TestTriggerHeuristicGrader_PositiveAndNegativeModes(t *testing.T) {
 	})
 
 	t.Run("negative mode passes for unrelated prompt", func(t *testing.T) {
-		g, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		g, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			SkillPath: skillPath,
 			Mode:      "negative",
 		})
@@ -101,7 +101,7 @@ func TestTriggerHeuristicGrader_PositiveAndNegativeModes(t *testing.T) {
 	})
 
 	t.Run("negative mode fails for matching prompt", func(t *testing.T) {
-		g, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+		g, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 			SkillPath: skillPath,
 			Mode:      "negative",
 		})
@@ -123,7 +123,7 @@ func TestTriggerHeuristicGrader_ThresholdBoundary(t *testing.T) {
 	skillPath := writeTestSkillFile(t)
 	threshold := 0.5
 
-	g, err := NewTriggerHeuristicGrader("trigger", TriggerHeuristicGraderParams{
+	g, err := NewTriggerHeuristicGrader("trigger", models.TriggerHeuristicGraderParameters{
 		SkillPath: skillPath,
 		Mode:      "positive",
 		Threshold: &threshold,
@@ -174,7 +174,7 @@ Use this skill for Azure deployment workflows.
 }
 
 func TestTriggerHeuristicGrader_NilGradingContext(t *testing.T) {
-	g, err := NewTriggerHeuristicGrader("nil-ctx-test", TriggerHeuristicGraderParams{
+	g, err := NewTriggerHeuristicGrader("nil-ctx-test", models.TriggerHeuristicGraderParameters{
 		SkillPath: writeTestSkillFile(t),
 		Mode:      "positive",
 	})
@@ -195,7 +195,7 @@ func TestTriggerHeuristicGrader_NilGradingContext(t *testing.T) {
 
 func TestTriggerHeuristicGrader_DuplicateTokensDoNotDiluteScore(t *testing.T) {
 	skillPath := writeTestSkillFile(t)
-	g, err := NewTriggerHeuristicGrader("dup-test", TriggerHeuristicGraderParams{
+	g, err := NewTriggerHeuristicGrader("dup-test", models.TriggerHeuristicGraderParameters{
 		SkillPath: skillPath,
 		Mode:      "positive",
 	})
@@ -217,7 +217,7 @@ func TestTriggerHeuristicGrader_SkillPathDirectory(t *testing.T) {
 	filePath := writeTestSkillFile(t)
 	dirPath := filepath.Dir(filePath)
 
-	g, err := NewTriggerHeuristicGrader("dir-test", TriggerHeuristicGraderParams{
+	g, err := NewTriggerHeuristicGrader("dir-test", models.TriggerHeuristicGraderParameters{
 		SkillPath: dirPath,
 		Mode:      "positive",
 	})

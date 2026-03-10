@@ -77,11 +77,7 @@ func Create(identifier string, params models.GraderParameters) (Grader, error) {
 	case models.ProgramGraderParameters:
 		return NewProgramGrader(identifier, p)
 	case models.TriggerHeuristicGraderParameters:
-		return NewTriggerHeuristicGrader(identifier, TriggerHeuristicGraderParams{
-			SkillPath: p.SkillPath,
-			Mode:      p.Mode,
-			Threshold: p.Threshold,
-		})
+		return NewTriggerHeuristicGrader(identifier, p)
 	default:
 		return nil, fmt.Errorf("'%T' is not a valid grader configuration", params)
 	}

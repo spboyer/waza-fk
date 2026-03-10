@@ -19,7 +19,7 @@
 
 ### Fields
 
-- `skill_path` (required): Path to the skill `SKILL.md` file.
+- `skill_path` (required): Path to the `SKILL.md` file or the skill directory containing it.
 - `mode` (required): `positive` or `negative`.
   - `positive`: passes when score is `>= threshold`.
   - `negative`: passes when score is `< threshold`.
