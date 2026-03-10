@@ -182,16 +182,16 @@ code, analysis
 EOF
 ```
 
-## waza eval
+## waza new eval
 
-Evaluation scaffolding commands.
+Scaffold an eval suite for an existing skill.
 
-### waza eval new
+### waza new eval
 
 Generate an eval scaffold from an existing `SKILL.md`.
 
 ```bash
-waza eval new <skill-name>
+waza new eval <skill-name>
 ```
 
 Creates:
@@ -210,10 +210,10 @@ Creates:
 
 ```bash
 # Generate eval scaffold using skills/my-skill/SKILL.md
-waza eval new my-skill
+waza new eval my-skill
 
 # Write eval.yaml to a custom location
-waza eval new my-skill --output evals/custom/my-skill-eval.yaml
+waza new eval my-skill --output evals/custom/my-skill-eval.yaml
 ```
 
 ## waza check

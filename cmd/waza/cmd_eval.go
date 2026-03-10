@@ -15,23 +15,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newEvalCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "eval",
-		Short: "Work with evaluation suites",
-		Long:  "Create and manage evaluation scaffolding and related artifacts.",
-	}
-
-	cmd.AddCommand(newEvalNewCommand())
-	return cmd
-}
-
 func newEvalNewCommand() *cobra.Command {
 	var output string
 
 	cmd := &cobra.Command{
-		Use:   "new <skill-name>",
-		Short: "Scaffold a new eval suite for a skill",
+		Use:   "eval <skill-name>",
+		Short: "Scaffold a new eval suite for an existing skill",
 		Long: `Generate an eval scaffold using a skill's SKILL.md frontmatter.
 
 Creates:

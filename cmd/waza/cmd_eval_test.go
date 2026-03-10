@@ -30,7 +30,7 @@ description: |
 	root := newRootCommand()
 	root.SetOut(&out)
 	root.SetErr(&out)
-	root.SetArgs([]string{"eval", "new", "deploy-assistant"})
+	root.SetArgs([]string{"new", "eval", "deploy-assistant"})
 	require.NoError(t, root.Execute())
 
 	evalPath := filepath.Join(dir, "evals", "deploy-assistant", "eval.yaml")
@@ -77,7 +77,7 @@ description: |
 	root := newRootCommand()
 	root.SetOut(&bytes.Buffer{})
 	root.SetErr(&bytes.Buffer{})
-	root.SetArgs([]string{"eval", "new", "my-skill", "--output", customEvalPath})
+	root.SetArgs([]string{"new", "eval", "my-skill", "--output", customEvalPath})
 	require.NoError(t, root.Execute())
 
 	assert.FileExists(t, filepath.Join(dir, customEvalPath))
@@ -92,23 +92,25 @@ func TestEvalNewCommand_MissingSkillMDError(t *testing.T) {
 	root := newRootCommand()
 	root.SetOut(&bytes.Buffer{})
 	root.SetErr(&bytes.Buffer{})
-	root.SetArgs([]string{"eval", "new", "missing-skill"})
+	root.SetArgs([]string{"new", "eval", "missing-skill"})
 	err := root.Execute()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "SKILL.md not found")
 }
 
-func TestRootCommand_HasEvalSubcommand(t *testing.T) {
+func TestNewCommand_HasEvalSubcommand(t *testing.T) {
 	root := newRootCommand()
 	found := false
 	for _, c := range root.Commands() {
-		if c.Name() == "eval" {
-			found = true
-			assert.Contains(t, c.Use, "eval")
-			break
+		if c.Name() == "new" {
+			for _, sub := range c.Commands() {
+				if sub.Name() == "eval" {
+					found = true
+				}
+			}
 		}
 	}
-	assert.True(t, found, "root command should have 'eval' subcommand")
+	assert.True(t, found, "'new' command should have 'eval' subcommand")
 }
 
 func TestEvalNewCommand_RespectsCustomSkillsDirFromConfig(t *testing.T) {
@@ -128,7 +130,7 @@ description: |
 	root := newRootCommand()
 	root.SetOut(&bytes.Buffer{})
 	root.SetErr(&bytes.Buffer{})
-	root.SetArgs([]string{"eval", "new", "deploy-assistant"})
+	root.SetArgs([]string{"new", "eval", "deploy-assistant"})
 	require.NoError(t, root.Execute())
 
 	assert.FileExists(t, filepath.Join(dir, "evals", "deploy-assistant", "eval.yaml"))
