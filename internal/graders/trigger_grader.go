@@ -27,6 +27,7 @@ type triggerHeuristicGrader struct {
 	mode           triggerHeuristicMode
 	threshold      float64
 	skillPath      string
+	configuredPath string
 	keywords       map[string]struct{}
 	triggerPhrases []string
 }
@@ -62,6 +63,7 @@ func NewTriggerHeuristicGrader(name string, params models.TriggerHeuristicGrader
 		mode:           mode,
 		threshold:      threshold,
 		skillPath:      skillPath,
+		configuredPath: params.SkillPath,
 		keywords:       keywords,
 		triggerPhrases: phrases,
 	}, nil
@@ -112,7 +114,7 @@ func (g *triggerHeuristicGrader) Grade(ctx context.Context, gradingContext *Cont
 			Details: map[string]any{
 				"mode":             string(g.mode),
 				"threshold":        g.threshold,
-				"skill_path":       g.skillPath,
+				"skill_path":       g.configuredPath,
 				"matched_keywords": matchedKeywords,
 				"matched_count":    len(matchedKeywords),
 				"keyword_count":    len(g.keywords),
