@@ -26,7 +26,6 @@ type triggerHeuristicGrader struct {
 	name           string
 	mode           triggerHeuristicMode
 	threshold      float64
-	skillPath      string
 	configuredPath string
 	keywords       map[string]struct{}
 	triggerPhrases []string
@@ -62,7 +61,6 @@ func NewTriggerHeuristicGrader(name string, params models.TriggerHeuristicGrader
 		name:           name,
 		mode:           mode,
 		threshold:      threshold,
-		skillPath:      skillPath,
 		configuredPath: params.SkillPath,
 		keywords:       keywords,
 		triggerPhrases: phrases,
