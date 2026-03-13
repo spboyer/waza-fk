@@ -12,9 +12,10 @@ import (
 type Status string
 
 const (
-	StatusPassed Status = "passed"
-	StatusFailed Status = "failed"
-	StatusError  Status = "error"
+	StatusPassed  Status = "passed"
+	StatusFailed  Status = "failed"
+	StatusError   Status = "error"
+	StatusSkipped Status = "skipped"
 	// StatusNA is used in comparison reports when a task is not found in a result file.
 	StatusNA Status = "n/a"
 )
@@ -132,6 +133,12 @@ type GroupStats struct {
 	AvgScore float64 `json:"avg_score"`
 }
 
+// SkillInvocation records a skill invoked during an agent session.
+type SkillInvocation struct {
+	Name string `json:"name"`
+	Path string `json:"path,omitempty"`
+}
+
 // RunResult is the result of a single run/trial
 type RunResult struct {
 	RunNumber int `json:"run_number"`
@@ -139,13 +146,14 @@ type RunResult struct {
 	// Status contains the overall status of the run.
 	// NOTE: if Status == [StatusError], then [ErrorMsg] will be set to the
 	// message from the error.
-	Status        Status                   `json:"status"`
-	DurationMs    int64                    `json:"duration_ms"`
-	Validations   map[string]GraderResults `json:"validations"`
-	SessionDigest SessionDigest            `json:"session_digest"`
-	Transcript    []TranscriptEvent        `json:"transcript,omitempty"`
-	FinalOutput   string                   `json:"final_output"`
-	ErrorMsg      string                   `json:"error_msg,omitempty"`
+	Status           Status                   `json:"status"`
+	DurationMs       int64                    `json:"duration_ms"`
+	Validations      map[string]GraderResults `json:"validations"`
+	SessionDigest    SessionDigest            `json:"session_digest"`
+	Transcript       []TranscriptEvent        `json:"transcript,omitempty"`
+	FinalOutput      string                   `json:"final_output"`
+	ErrorMsg         string                   `json:"error_msg,omitempty"`
+	SkillInvocations []SkillInvocation        `json:"skill_invocations,omitempty"`
 }
 
 type GraderResults struct {
