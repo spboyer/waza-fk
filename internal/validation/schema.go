@@ -1,6 +1,12 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+
+// cspell: ignore santhosh tekuri
+
 package validation
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -48,23 +54,38 @@ func mustCompileSchema(raw string, name string) *jsonschema.Schema {
 
 // ValidateEvalFile validates an eval.yaml file at the given path against the JSON schema.
 // Returns errors for the eval itself AND all referenced task files.
+//
+// This assumes that the schema files are up-to-date with the implementation.
+// Other YAML decoding errors may be reported if fields are removed from the implementation. Those
+// will be caught by the strict YAML parsing in LoadTestCase and LoadBenchmarkSpec, but the schema
+// validation has a much higher fidelity (better error location) than the validation in LoadTestCase
+// and LoadBenchmarkSpec.
 func ValidateEvalFile(evalPath string) (evalErrs []string, taskErrs map[string][]string, err error) {
 	data, err := os.ReadFile(evalPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading eval file: %w", err)
 	}
 
-	// Validate eval schema
+	// Validate the data against the eval schema
 	evalErrs = ValidateEvalBytes(data)
 
-	// Parse into a minimal struct to resolve task globs
+	// Since we're just validating the eval.yaml and its referenced tasks, we don't need to parse the
+	// full spec here.
+	// But a spec must have at least one task reference, so we'll parse out the "tasks" field to find the referenced task files.
+	//
+	// Note that we're NOT performing a full validation here.
+	// If the "tasks" field is missing or not an array of strings, we'll return
+	// any schema validation errors in addition to the YAML parsing error for
+	// the "tasks" field, but we won't attempt to validate any tasks.
 	var spec struct {
 		Tasks []string `yaml:"tasks"`
 	}
 	if yamlErr := yaml.Unmarshal(data, &spec); yamlErr != nil {
-		return evalErrs, nil, nil // can't resolve tasks, but eval errors are still useful
+		evalErrs = append(evalErrs, fmt.Sprintf("yaml 'tasks' parse: %v", yamlErr))
+		return evalErrs, nil, nil
 	}
 
+	// Now walk the set of tasks referenced by the eval.yaml and validate each one.
 	baseDir := filepath.Dir(evalPath)
 	taskErrs = make(map[string][]string)
 
@@ -106,7 +127,8 @@ func ValidateTaskBytes(data []byte) []string {
 func validateYAMLBytes(schema *jsonschema.Schema, data []byte) []string {
 	// Parse YAML into generic any
 	var yamlDoc any
-	if err := yaml.Unmarshal(data, &yamlDoc); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(&yamlDoc); err != nil {
 		return []string{fmt.Sprintf("YAML parse error: %v", err)}
 	}
 

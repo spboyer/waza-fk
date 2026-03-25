@@ -1082,6 +1082,7 @@ func countValidatedTasks(report *readinessReport) int {
 	var spec struct {
 		Tasks []string `yaml:"tasks"`
 	}
+
 	if err := yaml.Unmarshal(data, &spec); err != nil {
 		return 0
 	}

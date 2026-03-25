@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,7 +36,7 @@ type Config struct {
 	TrialsPerTask  int            `yaml:"trials_per_task" json:"runs_per_test"`
 	TimeoutSec     int            `yaml:"timeout_seconds" json:"timeout_sec"`
 	Concurrent     bool           `yaml:"parallel" json:"concurrent"`
-	Workers        int            `yaml:"max_workers,omitempty" json:"workers,omitempty"`
+	Workers        int            `yaml:"workers,omitempty" json:"workers,omitempty"`
 	StopOnError    bool           `yaml:"fail_fast,omitempty" json:"stop_on_error,omitempty"`
 	EngineType     string         `yaml:"executor" json:"engine_type"`
 	ModelID        string         `yaml:"model" json:"model_id"`
@@ -70,7 +71,14 @@ func (g *GraderConfig) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	var raw rawGraderConfig
-	if err := node.Decode(&raw); err != nil {
+	bytesData, err := yaml.Marshal(node)
+	if err != nil {
+		return fmt.Errorf("failed to marshal grader config: %w", err)
+	}
+
+	decoder := yaml.NewDecoder(bytes.NewReader(bytesData))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&raw); err != nil {
 		return err
 	}
 
@@ -107,7 +115,11 @@ type MeasurementDef struct {
 	Desc       string  `yaml:"description,omitempty" json:"desc,omitempty"`
 }
 
-// LoadBenchmarkSpec loads a spec from a YAML file
+// LoadBenchmarkSpec loads a spec from a YAML file with strict validation.
+//
+// Normally the schema validation will catch errors in the eval.yaml, but this also does
+// strict YAML parsing to catch errors like unknown fields or type errors that the schema
+// validation might miss.
 func LoadBenchmarkSpec(path string) (*BenchmarkSpec, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -115,8 +127,11 @@ func LoadBenchmarkSpec(path string) (*BenchmarkSpec, error) {
 	}
 
 	var spec BenchmarkSpec
-	if err := yaml.Unmarshal(data, &spec); err != nil {
-		return nil, err
+
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&spec); err != nil {
+		return nil, fmt.Errorf("parsing benchmark spec YAML (%s): %w", path, err)
 	}
 
 	// Validate spec

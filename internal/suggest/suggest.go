@@ -190,6 +190,7 @@ func AvailableGraderTypes() []string {
 		string(models.GraderKindSkillInvocation),
 		string(models.GraderKindTrigger),
 		string(models.GraderKindDiff),
+		string(models.GraderKindToolConstraint),
 	}
 }
 
@@ -198,7 +199,9 @@ func ParseResponse(raw string) (*Suggestion, error) {
 	normalized := extractYAML(raw)
 
 	var s Suggestion
-	if err := yaml.Unmarshal([]byte(normalized), &s); err == nil && strings.TrimSpace(s.EvalYAML) != "" {
+	decoder := yaml.NewDecoder(strings.NewReader(normalized))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&s); err == nil && strings.TrimSpace(s.EvalYAML) != "" {
 		if err := validateEvalYAML(s.EvalYAML); err != nil {
 			return nil, err
 		}
@@ -330,7 +333,9 @@ func extractYAML(raw string) string {
 
 func validateEvalYAML(raw string) error {
 	var spec models.BenchmarkSpec
-	if err := yaml.Unmarshal([]byte(raw), &spec); err != nil {
+	decoder := yaml.NewDecoder(strings.NewReader(raw))
+	decoder.KnownFields(true) // Strict parsing to catch unknown fields
+	if err := decoder.Decode(&spec); err != nil {
 		return fmt.Errorf("invalid eval_yaml: %w", err)
 	}
 	if err := spec.Validate(); err != nil {

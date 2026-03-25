@@ -173,7 +173,7 @@ func TestParseResponseRejectsBareStringGraders(t *testing.T) {
 }
 
 // TestEvalYAMLRoundTrip verifies that valid eval YAML can be marshaled and
-// then unmarshalled back into a BenchmarkSpec without loss.
+// then unmarshaled back into a BenchmarkSpec without loss.
 func TestEvalYAMLRoundTrip(t *testing.T) {
 	evalYAML := `name: roundtrip-eval
 description: test round-trip
@@ -189,7 +189,7 @@ graders:
   - type: text
     name: check_keywords
     config:
-      must_include:
+      contains:
         - hello
   - type: skill_invocation
     name: skill_was_invoked
@@ -303,4 +303,38 @@ tasks:
 	taskData, err := os.ReadFile(filepath.Join(outDir, "tasks", "basic.yaml"))
 	require.NoError(t, err)
 	require.True(t, strings.Contains(string(taskData), "id: basic-001"))
+}
+
+func TestValidateInvalidConfigFields(t *testing.T) {
+	invalidEvalYAML := `name: bad-eval
+description: has unknown field
+skill: test-skill
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 120
+  executor: mock
+  model: test
+  unknown_field: should cause error
+`
+	err := validateEvalYAML(invalidEvalYAML)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown_field")
+}
+
+func TestValidateInvalidBenchmarkSpecFields(t *testing.T) {
+	invalidEvalYAML := `name: bad-eval
+description: has unknown field
+skill: test-skill
+version: "1.0"
+unknown_field: should cause error
+config:
+  trials_per_task: 1
+  timeout_seconds: 120
+  executor: mock
+  model: test
+`
+	err := validateEvalYAML(invalidEvalYAML)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown_field")
 }

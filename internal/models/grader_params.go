@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -231,9 +232,15 @@ func decodeYAMLNode[T GraderParameters](node *yaml.Node) (T, error) {
 		node.Kind == 0 { // apparently you can get an empty YAML node
 		return target, nil
 	}
+	params, err := yaml.Marshal(node)
+	if err != nil {
+		return target, fmt.Errorf("failed to marshal YAML node: %w", err)
+	}
 
-	if err := node.Decode(&target); err != nil {
-		return target, fmt.Errorf("failed to decode grader config of type %T: %w", target, err)
+	decoder := yaml.NewDecoder(bytes.NewReader(params))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&target); err != nil {
+		return target, fmt.Errorf("failed to decode grader parameters of type %T: %w", target, err)
 	}
 
 	return target, nil

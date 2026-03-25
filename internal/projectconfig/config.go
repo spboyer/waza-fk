@@ -1,8 +1,14 @@
+// Copyright 2024 Microsoft Corp. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root for license information.
+
+// cspell:ignore unmarshals
+
 // Package projectconfig provides the ProjectConfig struct and loader for
 // .waza.yaml project-level configuration files.
 package projectconfig
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -194,7 +200,10 @@ func Load(startDir string) (*ProjectConfig, error) {
 	cfg.Dir = filepath.Dir(configPath)
 
 	var fileCfg ProjectConfig
-	if err := yaml.Unmarshal(data, &fileCfg); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+
+	if err := decoder.Decode(&fileCfg); err != nil {
 		return nil, fmt.Errorf("parsing .waza.yaml: %w", err)
 	}
 
